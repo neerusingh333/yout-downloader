@@ -21,7 +21,7 @@ def download_video():
     resolution = data['format']
     download_id = str(int(time.time()))
     progress_data[download_id] = 0
-    
+
     def download():
         ydl_opts = {
             'format': f'bestvideo[height<={resolution[:-1]}][ext=mp4]+bestaudio[ext=m4a]/best[height<={resolution[:-1]}][ext=mp4]',
@@ -36,14 +36,14 @@ def download_video():
                 '-acodec', 'aac',
             ],
         }
-        
+
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
             progress_data[download_id] = 'done'
         except Exception as e:
             progress_data[download_id] = f'error: {str(e)}'
-    
+
     threading.Thread(target=download).start()
     return jsonify({"download_id": download_id})
 
@@ -55,6 +55,7 @@ def progress(download_id):
             yield f'data: {{"progress": "{progress}"}}\n\n'
             if progress == 'done' or 'error' in str(progress):
                 break
+            time.sleep(1)
     return Response(generate(), mimetype='text/event-stream')
 
 @app.route('/get_video/<download_id>', methods=['GET'])

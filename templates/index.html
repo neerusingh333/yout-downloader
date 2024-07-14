@@ -26,65 +26,81 @@
             <button type="submit">Download</button>
         </form>
         <div id="message"></div>
-        <div id="progressContainer" style="display:none;">
+        <div id="progressContainer" style="display: none;">
             <progress id="progressBar" value="0" max="100"></progress>
-            <span id="progressText">0%</span>
+            <div id="progressText"></div>
         </div>
-        <div id="downloadLink" style="display:none;">
+        <div id="downloadLink" style="display: none;">
             <a href="#" id="videoLink">Download Video</a>
         </div>
     </div>
     <script>
+        let downloadId = null;
+        let eventSource = null;
+
         document.getElementById('downloadForm').onsubmit = async function(event) {
             event.preventDefault();
             const url = document.getElementById('url').value;
             const format = document.getElementById('format').value;
-            
+
             const messageDiv = document.getElementById('message');
-            const progressContainer = document.getElementById('progressContainer');
-            const progressBar = document.getElementById('progressBar');
-            const progressText = document.getElementById('progressText');
-            const downloadLink = document.getElementById('downloadLink');
-            
-            messageDiv.textContent = "";
-            progressContainer.style.display = 'none';
-            downloadLink.style.display = 'none';
-            
-            messageDiv.textContent = "Download started";
-            
-            const response = await fetch('/download', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url, format })
-            });
-            
-            if (response.ok) {
-                const { download_id } = await response.json();
-                progressContainer.style.display = 'block';
-                
-                const eventSource = new EventSource(`/progress/${download_id}`);
-                eventSource.onmessage = function(event) {
-                    const data = JSON.parse(event.data);
-                    const progress = data.progress;
-                    if (progress === 'done' || progress.includes('error')) {
-                        eventSource.close();
-                        if (progress === 'done') {
-                            messageDiv.textContent = "Download completed!";
-                            downloadLink.style.display = 'block';
-                            document.getElementById('videoLink').href = `/get_video/${download_id}`;
-                        } else {
-                            messageDiv.textContent = `Error: ${progress}`;
-                        }
-                    } else {
-                        progressBar.value = progress;
-                        progressText.textContent = `${progress}%`;
-                    }
-                };
-            } else {
-                const error = await response.json();
-                messageDiv.textContent = `Error: ${error.error}`;
+            messageDiv.textContent = "Starting download...";
+
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, format })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    downloadId = result.download_id;
+                    document.getElementById('progressContainer').style.display = 'block';
+                    startProgressUpdates();
+                } else {
+                    messageDiv.textContent = `Error: ${result.error}`;
+                }
+            } catch (error) {
+                messageDiv.textContent = `Error: ${error.message}`;
             }
         };
+
+        function startProgressUpdates() {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            eventSource = new EventSource(`/progress/${downloadId}`);
+
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                const progressBar = document.getElementById('progressBar');
+                const progressText = document.getElementById('progressText');
+
+                if (data.progress === 'done') {
+                    progressBar.value = 100;
+                    progressText.textContent = 'Download complete!';
+                    eventSource.close();
+                    document.getElementById('downloadLink').style.display = 'block';
+                    document.getElementById('videoLink').href = `/get_video/${downloadId}`;
+                } else if (data.progress.startsWith('error')) {
+                    progressText.textContent = data.progress;
+                    eventSource.close();
+                } else if (data.progress === 'Processing') {
+                    progressText.textContent = 'Processing video...';
+                } else {
+                    progressBar.value = data.progress;
+                    progressText.textContent = `${data.progress}%`;
+                }
+            };
+
+            eventSource.onerror = function(error) {
+                console.error('EventSource failed:', error);
+                eventSource.close();
+            };
+        }
     </script>
 </body>
 </html>
