@@ -36,7 +36,7 @@
     </div>
     <script>
         let downloadId = null;
-        let eventSource = null;
+        let pollingInterval = null;
 
         document.getElementById('downloadForm').onsubmit = async function(event) {
             event.preventDefault();
@@ -68,44 +68,39 @@
         };
 
         function startProgressUpdates() {
-            if (eventSource) {
-                eventSource.close();
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
             }
 
-            eventSource = new EventSource(`/progress/${downloadId}`);
+            pollingInterval = setInterval(checkProgress, 1000);
+        }
 
-            eventSource.onopen = function(event) {
-                console.log('Connection opened');
-            };
+        async function checkProgress() {
+            try {
+                const response = await fetch(`/progress/${downloadId}`);
+                const data = await response.json();
 
-            eventSource.onmessage = function(event) {
-                const data = JSON.parse(event.data);
                 const progressBar = document.getElementById('progressBar');
                 const progressText = document.getElementById('progressText');
 
                 if (data.progress === 'done') {
                     progressBar.value = 100;
                     progressText.textContent = 'Download complete!';
-                    eventSource.close();
+                    clearInterval(pollingInterval);
                     document.getElementById('downloadLink').style.display = 'block';
                     document.getElementById('videoLink').href = `/get_video/${downloadId}`;
-                } else if (data.progress.startsWith('error')) {
+                } else if (String(data.progress).startsWith('error')) {
                     progressText.textContent = data.progress;
-                    eventSource.close();
+                    clearInterval(pollingInterval);
                 } else if (data.progress === 'Processing') {
                     progressText.textContent = 'Processing video...';
                 } else {
                     progressBar.value = data.progress;
                     progressText.textContent = `${data.progress}%`;
                 }
-            };
-
-            eventSource.onerror = function(error) {
-                console.error('EventSource failed:', error);
-                eventSource.close();
-                // Attempt to reconnect after a delay
-                setTimeout(startProgressUpdates, 5000);
-            };
+            } catch (error) {
+                console.error('Error checking progress:', error);
+            }
         }
     </script>
 </body>

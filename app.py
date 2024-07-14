@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, Response, send_file
+from flask import Flask, request, jsonify, render_template, send_file
 from flask_cors import CORS
 import yt_dlp
 import os
@@ -49,17 +49,7 @@ def download_video():
 
 @app.route('/progress/<download_id>', methods=['GET'])
 def progress(download_id):
-    def generate():
-        while True:
-            progress = progress_data.get(download_id, 0)
-            yield f'data: {{"progress": "{progress}"}}\n\n'
-            if progress == 'done' or 'error' in str(progress):
-                break
-            time.sleep(1)
-    response = Response(generate(), mimetype='text/event-stream')
-    response.headers['Cache-Control'] = 'no-cache'
-    response.headers['X-Accel-Buffering'] = 'no'
-    return response
+    return jsonify({"progress": progress_data.get(download_id, 0)})
 
 @app.route('/get_video/<download_id>', methods=['GET'])
 def get_video(download_id):
