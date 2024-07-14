@@ -89,20 +89,18 @@
                 const progressBar = document.getElementById('progressBar');
                 const progressText = document.getElementById('progressText');
 
-                if (data.progress === 'done') {
+                if (data.status === 'done') {
                     progressBar.value = 100;
                     progressText.textContent = 'Download complete!';
                     clearInterval(pollingInterval);
                     document.getElementById('downloadLink').style.display = 'block';
                     document.getElementById('videoLink').href = `/get_video/${downloadId}`;
-                } else if (String(data.progress).startsWith('error')) {
-                    progressText.textContent = data.progress;
+                } else if (data.status === 'error') {
+                    progressText.textContent = `Error: ${data.progress}`;
                     clearInterval(pollingInterval);
-                } else if (data.progress === 'Processing') {
-                    progressText.textContent = 'Processing video...';
                 } else {
                     progressBar.value = data.progress;
-                    progressText.textContent = `${data.progress}%`;
+                    progressText.textContent = `${data.status}: ${data.progress}%`;
                 }
             } catch (error) {
                 console.error('Error checking progress:', error);
