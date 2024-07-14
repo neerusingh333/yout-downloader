@@ -74,6 +74,10 @@
 
             eventSource = new EventSource(`/progress/${downloadId}`);
 
+            eventSource.onopen = function(event) {
+                console.log('Connection opened');
+            };
+
             eventSource.onmessage = function(event) {
                 const data = JSON.parse(event.data);
                 const progressBar = document.getElementById('progressBar');
@@ -99,6 +103,8 @@
             eventSource.onerror = function(error) {
                 console.error('EventSource failed:', error);
                 eventSource.close();
+                // Attempt to reconnect after a delay
+                setTimeout(startProgressUpdates, 5000);
             };
         }
     </script>

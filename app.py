@@ -6,7 +6,7 @@ import threading
 import time
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 progress_data = {}
 
@@ -56,7 +56,10 @@ def progress(download_id):
             if progress == 'done' or 'error' in str(progress):
                 break
             time.sleep(1)
-    return Response(generate(), mimetype='text/event-stream')
+    response = Response(generate(), mimetype='text/event-stream')
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['X-Accel-Buffering'] = 'no'
+    return response
 
 @app.route('/get_video/<download_id>', methods=['GET'])
 def get_video(download_id):
