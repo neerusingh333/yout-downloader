@@ -47,6 +47,7 @@
             messageDiv.textContent = "Starting download...";
 
             try {
+                console.log("Sending download request");
                 const response = await fetch('/download', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -54,6 +55,7 @@
                 });
 
                 const result = await response.json();
+                console.log("Download request response:", result);
 
                 if (response.ok) {
                     downloadId = result.download_id;
@@ -63,6 +65,7 @@
                     messageDiv.textContent = `Error: ${result.error}`;
                 }
             } catch (error) {
+                console.error("Error in download request:", error);
                 messageDiv.textContent = `Error: ${error.message}`;
             }
         };
@@ -73,12 +76,15 @@
             }
 
             pollingInterval = setInterval(checkProgress, 1000);
+            console.log("Started progress updates");
         }
 
         async function checkProgress() {
             try {
+                console.log("Checking progress");
                 const response = await fetch(`/progress/${downloadId}`);
                 const data = await response.json();
+                console.log("Progress data:", data);
 
                 const progressBar = document.getElementById('progressBar');
                 const progressText = document.getElementById('progressText');
