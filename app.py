@@ -5,6 +5,7 @@ import os
 import threading
 import time
 import logging
+import signal
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
@@ -30,11 +31,18 @@ def download_video():
     progress_data[download_id] = {'status': 'Starting', 'progress': 0}
 
     def download():
+        def timeout_handler(signum, frame):
+            raise Exception("Processing timed out")
+
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(300)  # Set a 5-minute timeout
+
         logger.info(f"Starting download for ID: {download_id}")
         ydl_opts = {
-            'format': f'bestvideo[height<={resolution[:-1]}][ext=mp4]+bestaudio[ext=m4a]/best[height<={resolution[:-1]}][ext=mp4]',
+            'format': f'best[height<={resolution[:-1]}][ext=mp4]/best[ext=mp4]',
             'outtmpl': f'output_{download_id}.%(ext)s',
             'progress_hooks': [lambda d: update_progress(download_id, d)],
+            'merge_output_format': 'mp4',
             'postprocessors': [{
                 'key': 'FFmpegVideoConvertor',
                 'preferedformat': 'mp4',
@@ -50,11 +58,20 @@ def download_video():
                 logger.info(f"Starting YouTube download for ID: {download_id}")
                 ydl.download([url])
             logger.info(f"YouTube download completed for ID: {download_id}")
-            progress_data[download_id] = {'status': 'done', 'progress': 100}
-            logger.info(f"Download and processing completed for ID: {download_id}")
+            logger.info(f"Checking if file exists: output_{download_id}.mp4")
+            if os.path.exists(f"output_{download_id}.mp4"):
+                file_size = os.path.getsize(f"output_{download_id}.mp4")
+                logger.info(f"File exists. Size: {file_size} bytes")
+                progress_data[download_id] = {'status': 'done', 'progress': 100}
+                logger.info(f"Download and processing completed for ID: {download_id}")
+            else:
+                logger.error(f"File not found after processing: output_{download_id}.mp4")
+                progress_data[download_id] = {'status': 'error', 'progress': 'File not found after processing'}
         except Exception as e:
-            progress_data[download_id] = {'status': 'error', 'progress': str(e)}
             logger.error(f"Error during download for ID {download_id}: {str(e)}")
+            progress_data[download_id] = {'status': 'error', 'progress': str(e)}
+        finally:
+            signal.alarm(0)  # Cancel the alarm
 
     threading.Thread(target=download).start()
     logger.info(f"Download thread started for ID: {download_id}")
@@ -66,6 +83,22 @@ def progress(download_id):
     progress = progress_data.get(download_id, {'status': 'Not found', 'progress': 0})
     logger.info(f"Progress for ID {download_id}: {progress}")
     return jsonify(progress)
+
+@app.route('/get_video/<download_id>', methods=['GET'])
+def get_video(download_id):
+    logger.info(f"Video download request for ID: {download_id}")
+    file_path = f'output_{download_id}.mp4'
+    if os.path.exists(file_path):
+        try:
+            return send_file(file_path, as_attachment=True, mimetype='video/mp4')
+        finally:
+            try:
+                os.remove(file_path)
+                logger.info(f"File deleted: {file_path}")
+            except Exception as e:
+                logger.error(f"Error deleting file {file_path}: {e}")
+    logger.warning(f"File not found: {file_path}")
+    return "File not found", 404
 
 def update_progress(download_id, d):
     if d['status'] == 'downloading':
