@@ -66,6 +66,7 @@
                 const downloadId = data.download_id;
 
                 progressDiv.style.display = 'block';
+                downloadLink.style.display = 'none';
                 checkProgress(downloadId);
             } catch (error) {
                 console.error('Error:', error);
@@ -83,13 +84,9 @@
 
                     if (data.status === 'done') {
                         clearInterval(interval);
+                        progressDiv.style.display = 'none';
                         downloadLink.style.display = 'block';
                         videoLink.href = `/get_video/${downloadId}`;
-                        videoLink.onclick = () => {
-                            setTimeout(() => {
-                                checkFileExists(downloadId);
-                            }, 1000);
-                        };
                     } else if (data.status === 'error') {
                         clearInterval(interval);
                         progressText.textContent = `Error: ${data.progress}`;
@@ -98,19 +95,6 @@
                     console.error('Error checking progress:', error);
                 }
             }, 1000);
-        }
-
-        function checkFileExists(downloadId) {
-            fetch(`/get_video/${downloadId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('File not found or not ready yet');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('The file is not ready yet. Please try again in a few moments.');
-                });
         }
     </script>
 </body>

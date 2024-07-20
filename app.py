@@ -39,6 +39,10 @@ def download_video():
             'outtmpl': output_template,
             'progress_hooks': [lambda d: update_progress(download_id, d)],
             'merge_output_format': 'mp4',
+            'postprocessors': [{
+                'key': 'FFmpegVideoConvertor',
+                'preferedformat': 'mp4',
+            }],
         }
 
         try:
@@ -70,10 +74,6 @@ def get_video(download_id):
         logger.error(f"No progress data found for download_id: {download_id}")
         return "Download information not found", 404
     
-    if progress_info['status'] != 'done':
-        logger.error(f"Download not complete for download_id: {download_id}. Status: {progress_info['status']}")
-        return "Download not complete", 400
-    
     filename = progress_info.get('filename')
     if not filename:
         logger.error(f"Filename not found in progress data for download_id: {download_id}")
@@ -95,8 +95,9 @@ def update_progress(download_id, d):
         }
     elif d['status'] == 'finished':
         progress_data[download_id] = {
-            'status': 'processing',
-            'progress': 99
+            'status': 'done',
+            'progress': 100,
+            'filename': d['filename']
         }
 
 if __name__ == '__main__':
