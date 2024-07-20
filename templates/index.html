@@ -4,107 +4,77 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Video Downloader</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="container">
-        <h1>YouTube Video Downloader</h1>
-        <form id="downloadForm">
-            <div>
-                <label for="url">YouTube URL:</label>
-                <input type="text" id="url" name="url" required>
-            </div>
-            <div>
-                <label for="format">Format:</label>
-                <select id="format" name="format">
-                    <option value="360p">360p</option>
-                    <option value="480p">480p</option>
-                    <option value="720p">720p</option>
-                    <option value="1080p">1080p</option>
-                </select>
-            </div>
-            <button type="submit">Download</button>
-        </form>
-        <div id="message"></div>
-        <div id="progressContainer" style="display: none;">
-            <progress id="progressBar" value="0" max="100"></progress>
-            <div id="progressText"></div>
-        </div>
-        <div id="downloadLink" style="display: none;">
-            <a href="#" id="videoLink">Download Video</a>
-        </div>
+    <h1>YouTube Video Downloader</h1>
+    <form id="downloadForm">
+        <input type="text" id="url" placeholder="YouTube URL" required>
+        <select id="format">
+            <option value="360p">360p</option>
+            <option value="480p">480p</option>
+            <option value="720p">720p</option>
+            <option value="1080p">1080p</option>
+        </select>
+        <button type="submit">Download</button>
+    </form>
+    <div id="progress" style="display: none;">
+        <progress id="progressBar" value="0" max="100"></progress>
+        <span id="progressText"></span>
     </div>
-    <script>
-        let downloadId = null;
-        let pollingInterval = null;
+    <div id="downloadLink" style="display: none;">
+        <a id="videoLink" href="#">Download Video</a>
+    </div>
 
-        document.getElementById('downloadForm').onsubmit = async function(event) {
-            event.preventDefault();
+    <script>
+        const form = document.getElementById('downloadForm');
+        const progressDiv = document.getElementById('progress');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const downloadLink = document.getElementById('downloadLink');
+        const videoLink = document.getElementById('videoLink');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
             const url = document.getElementById('url').value;
             const format = document.getElementById('format').value;
 
-            const messageDiv = document.getElementById('message');
-            messageDiv.textContent = "Starting download...";
-
             try {
-                console.log("Sending download request");
                 const response = await fetch('/download', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, format })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url, format})
                 });
-
-                const result = await response.json();
-                console.log("Download request response:", result);
-
-                if (response.ok) {
-                    downloadId = result.download_id;
-                    document.getElementById('progressContainer').style.display = 'block';
-                    startProgressUpdates();
-                } else {
-                    messageDiv.textContent = `Error: ${result.error}`;
-                }
-            } catch (error) {
-                console.error("Error in download request:", error);
-                messageDiv.textContent = `Error: ${error.message}`;
-            }
-        };
-
-        function startProgressUpdates() {
-            if (pollingInterval) {
-                clearInterval(pollingInterval);
-            }
-
-            pollingInterval = setInterval(checkProgress, 1000);
-            console.log("Started progress updates");
-        }
-
-        async function checkProgress() {
-            try {
-                console.log("Checking progress");
-                const response = await fetch(`/progress/${downloadId}`);
                 const data = await response.json();
-                console.log("Progress data:", data);
+                const downloadId = data.download_id;
 
-                const progressBar = document.getElementById('progressBar');
-                const progressText = document.getElementById('progressText');
+                progressDiv.style.display = 'block';
+                checkProgress(downloadId);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
 
-                if (data.status === 'done') {
-                    progressBar.value = 100;
-                    progressText.textContent = 'Download complete!';
-                    clearInterval(pollingInterval);
-                    document.getElementById('downloadLink').style.display = 'block';
-                    document.getElementById('videoLink').href = `/get_video/${downloadId}`;
-                } else if (data.status === 'error') {
-                    progressText.textContent = `Error: ${data.progress}`;
-                    clearInterval(pollingInterval);
-                } else {
+        function checkProgress(downloadId) {
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/progress/${downloadId}`);
+                    const data = await response.json();
+
                     progressBar.value = data.progress;
                     progressText.textContent = `${data.status}: ${data.progress}%`;
+
+                    if (data.status === 'done') {
+                        clearInterval(interval);
+                        downloadLink.style.display = 'block';
+                        videoLink.href = `/get_video/${downloadId}`;
+                    } else if (data.status === 'error') {
+                        clearInterval(interval);
+                        progressText.textContent = `Error: ${data.progress}`;
+                    }
+                } catch (error) {
+                    console.error('Error checking progress:', error);
                 }
-            } catch (error) {
-                console.error('Error checking progress:', error);
-            }
+            }, 1000);
         }
     </script>
 </body>
