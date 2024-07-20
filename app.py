@@ -39,21 +39,21 @@ def download_video():
             'outtmpl': output_template,
             'progress_hooks': [lambda d: update_progress(download_id, d)],
             'merge_output_format': 'mp4',
-            'postprocessors': [{
-                'key': 'FFmpegVideoConvertor',
-                'preferedformat': 'mp4',
-            }],
         }
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
-            final_filename = f'output_{download_id}.mp4'
-            if os.path.exists(os.path.join(app.config['DOWNLOAD_FOLDER'], final_filename)):
-                progress_data[download_id] = {'status': 'done', 'progress': 100, 'filename': final_filename}
-                logger.info(f"Download completed: {final_filename}")
-            else:
-                raise FileNotFoundError(f"Expected file not found: {final_filename}")
+            
+            # Check for the file with any extension
+            for ext in ['mp4', 'webm', 'mkv']:
+                final_filename = f'output_{download_id}.{ext}'
+                if os.path.exists(os.path.join(app.config['DOWNLOAD_FOLDER'], final_filename)):
+                    progress_data[download_id] = {'status': 'done', 'progress': 100, 'filename': final_filename}
+                    logger.info(f"Download completed: {final_filename}")
+                    return
+
+            raise FileNotFoundError(f"Expected file not found for download_id: {download_id}")
         except Exception as e:
             logger.error(f"Error during download: {str(e)}")
             progress_data[download_id] = {'status': 'error', 'progress': str(e)}
@@ -95,8 +95,8 @@ def update_progress(download_id, d):
         }
     elif d['status'] == 'finished':
         progress_data[download_id] = {
-            'status': 'done',
-            'progress': 100,
+            'status': 'processing',
+            'progress': 99,
             'filename': d['filename']
         }
 
