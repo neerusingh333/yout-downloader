@@ -56,14 +56,18 @@ def download_video():
             raise FileNotFoundError(f"Expected file not found for download_id: {download_id}")
         except Exception as e:
             logger.error(f"Error during download: {str(e)}")
-            progress_data[download_id] = {'status': 'error', 'progress': str(e)}
+            progress_data[download_id] = {'status': 'error', 'progress': 0, 'message': str(e)}
 
     threading.Thread(target=download).start()
     return jsonify({"download_id": download_id})
 
 @app.route('/progress/<download_id>')
 def progress(download_id):
-    return jsonify(progress_data.get(download_id, {'status': 'Not found', 'progress': 0}))
+    data = progress_data.get(download_id, {'status': 'Not found', 'progress': 0})
+    # Ensure progress is always a number
+    if not isinstance(data['progress'], (int, float)):
+        data['progress'] = 0
+    return jsonify(data)
 
 @app.route('/get_video/<download_id>')
 def get_video(download_id):
@@ -91,7 +95,7 @@ def update_progress(download_id, d):
     if d['status'] == 'downloading':
         progress_data[download_id] = {
             'status': 'downloading',
-            'progress': d.get('percentage', 0)
+            'progress': float(d.get('percentage', 0))
         }
     elif d['status'] == 'finished':
         progress_data[download_id] = {

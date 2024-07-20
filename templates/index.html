@@ -70,6 +70,7 @@
                 checkProgress(downloadId);
             } catch (error) {
                 console.error('Error:', error);
+                progressText.textContent = `Error: ${error.message}`;
             }
         });
 
@@ -79,8 +80,11 @@
                     const response = await fetch(`/progress/${downloadId}`);
                     const data = await response.json();
 
-                    progressBar.value = data.progress;
-                    progressText.textContent = `${data.status}: ${data.progress}%`;
+                    const progress = parseFloat(data.progress);
+                    if (!isNaN(progress)) {
+                        progressBar.value = progress;
+                    }
+                    progressText.textContent = `${data.status}: ${progress.toFixed(2)}%`;
 
                     if (data.status === 'done') {
                         clearInterval(interval);
@@ -89,10 +93,11 @@
                         videoLink.href = `/get_video/${downloadId}`;
                     } else if (data.status === 'error') {
                         clearInterval(interval);
-                        progressText.textContent = `Error: ${data.progress}`;
+                        progressText.textContent = `Error: ${data.message || 'Unknown error'}`;
                     }
                 } catch (error) {
                     console.error('Error checking progress:', error);
+                    progressText.textContent = `Error checking progress: ${error.message}`;
                 }
             }, 1000);
         }
