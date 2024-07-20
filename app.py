@@ -28,9 +28,10 @@ def download_video():
 
     def download():
         ydl_opts = {
-            'format': f'best[height<={resolution[:-1]}][ext=mp4]/best[ext=mp4]',
+            'format': f'bestvideo[height<={resolution[:-1]}]+bestaudio/best[height<={resolution[:-1]}]',
             'outtmpl': f'static/downloads/output_{download_id}.%(ext)s',
             'progress_hooks': [lambda d: update_progress(download_id, d)],
+            'merge_output_format': 'mp4',
         }
 
         try:
