@@ -4,6 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Video Downloader</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        input, select, button {
+            margin: 10px 0;
+            padding: 5px;
+        }
+        #progress, #downloadLink {
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
     <h1>YouTube Video Downloader</h1>
@@ -67,6 +85,11 @@
                         clearInterval(interval);
                         downloadLink.style.display = 'block';
                         videoLink.href = `/get_video/${downloadId}`;
+                        videoLink.onclick = () => {
+                            setTimeout(() => {
+                                checkFileExists(downloadId);
+                            }, 1000);
+                        };
                     } else if (data.status === 'error') {
                         clearInterval(interval);
                         progressText.textContent = `Error: ${data.progress}`;
@@ -75,6 +98,19 @@
                     console.error('Error checking progress:', error);
                 }
             }, 1000);
+        }
+
+        function checkFileExists(downloadId) {
+            fetch(`/get_video/${downloadId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('File not found or not ready yet');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('The file is not ready yet. Please try again in a few moments.');
+                });
         }
     </script>
 </body>
