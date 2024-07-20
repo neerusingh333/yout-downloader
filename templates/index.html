@@ -4,24 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Video Downloader</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        form {
-            margin-bottom: 20px;
-        }
-        input, select, button {
-            margin: 10px 0;
-            padding: 5px;
-        }
-        #progress, #downloadLink {
-            margin-top: 20px;
-        }
-    </style>
 </head>
 <body>
     <h1>YouTube Video Downloader</h1>
@@ -66,11 +48,9 @@
                 const downloadId = data.download_id;
 
                 progressDiv.style.display = 'block';
-                downloadLink.style.display = 'none';
                 checkProgress(downloadId);
             } catch (error) {
                 console.error('Error:', error);
-                progressText.textContent = `Error: ${error.message}`;
             }
         });
 
@@ -80,24 +60,19 @@
                     const response = await fetch(`/progress/${downloadId}`);
                     const data = await response.json();
 
-                    const progress = parseFloat(data.progress);
-                    if (!isNaN(progress)) {
-                        progressBar.value = progress;
-                    }
-                    progressText.textContent = `${data.status}: ${progress.toFixed(2)}%`;
+                    progressBar.value = data.progress;
+                    progressText.textContent = `${data.status}: ${data.progress}%`;
 
                     if (data.status === 'done') {
                         clearInterval(interval);
-                        progressDiv.style.display = 'none';
                         downloadLink.style.display = 'block';
                         videoLink.href = `/get_video/${downloadId}`;
                     } else if (data.status === 'error') {
                         clearInterval(interval);
-                        progressText.textContent = `Error: ${data.message || 'Unknown error'}`;
+                        progressText.textContent = `Error: ${data.progress}`;
                     }
                 } catch (error) {
                     console.error('Error checking progress:', error);
-                    progressText.textContent = `Error checking progress: ${error.message}`;
                 }
             }, 1000);
         }
