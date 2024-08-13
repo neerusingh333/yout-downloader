@@ -54,30 +54,29 @@
             }
         });
 
+        
         function checkProgress(downloadId) {
-    const interval = setInterval(async () => {
-        try {
-            const response = await fetch(`/progress/${downloadId}`);
-            const data = await response.json();
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/progress/${downloadId}`);
+                    const data = await response.json();
 
-            // Handle non-finite values
-            const progress = isFinite(data.progress) ? data.progress : 0;
-            progressBar.value = progress;
-            progressText.textContent = `${data.status}: ${progress}%`;
+                    progressBar.value = data.progress;
+                    progressText.textContent = `${data.status}: ${data.progress}%`;
 
-            if (data.status === 'done') {
-                clearInterval(interval);
-                downloadLink.style.display = 'block';
-                videoLink.href = `/get_video/${downloadId}`;
-            } else if (data.status === 'error') {
-                clearInterval(interval);
-                progressText.textContent = `Error: ${data.progress}`;
-            }
-        } catch (error) {
-            console.error('Error checking progress:', error);
+                    if (data.status === 'done') {
+                        clearInterval(interval);
+                        downloadLink.style.display = 'block';
+                        videoLink.href = `/get_video/${downloadId}`;
+                    } else if (data.status === 'error') {
+                        clearInterval(interval);
+                        progressText.textContent = `Error: ${data.progress}`;
+                    }
+                } catch (error) {
+                    console.error('Error checking progress:', error);
+                }
+            }, 1000);
         }
-    }, 1000);
-}
     </script>
 </body>
 </html>
