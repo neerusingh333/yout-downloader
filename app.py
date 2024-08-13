@@ -25,18 +25,33 @@ def download_video():
     resolution = data['format']
     download_id = str(int(time.time()))
     progress_data[download_id] = {'status': 'Starting', 'progress': 0}
-
+    
     def download():
         ydl_opts = {
             'format': f'best[height<={resolution[:-1]}][ext=mp4]/best[ext=mp4]',
             'outtmpl': f'static/downloads/output_{download_id}.%(ext)s',
             'progress_hooks': [lambda d: update_progress(download_id, d)],
+            'cookiesfrombrowser': ('chrome',),
+            'nocheckcertificate': True,
+            'ignoreerrors': True,
+            'no_warnings': True,
+            'quiet': True,
+            'no_color': True,
         }
-
+        
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                if info.get('age_limit', 0) > 0:
+                    progress_data[download_id] = {'status': 'error', 'progress': 'Age-restricted video. Sign-in required.'}
+                    return
                 ydl.download([url])
             progress_data[download_id] = {'status': 'done', 'progress': 100}
+        except yt_dlp.utils.DownloadError as e:
+            if "Sign in to confirm your age" in str(e):
+                progress_data[download_id] = {'status': 'error', 'progress': 'Age-restricted video. Sign-in required.'}
+            else:
+                progress_data[download_id] = {'status': 'error', 'progress': str(e)}
         except Exception as e:
             logger.error(f"Error during download: {str(e)}")
             progress_data[download_id] = {'status': 'error', 'progress': str(e)}
