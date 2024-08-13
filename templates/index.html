@@ -24,7 +24,7 @@
     <div id="downloadLink" style="display: none;">
         <a id="videoLink" href="#">Download Video</a>
     </div>
-
+    
     <script>
         const form = document.getElementById('downloadForm');
         const progressDiv = document.getElementById('progress');
@@ -32,12 +32,12 @@
         const progressText = document.getElementById('progressText');
         const downloadLink = document.getElementById('downloadLink');
         const videoLink = document.getElementById('videoLink');
-
+        
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const url = document.getElementById('url').value;
             const format = document.getElementById('format').value;
-
+            
             try {
                 const response = await fetch('/download', {
                     method: 'POST',
@@ -46,24 +46,28 @@
                 });
                 const data = await response.json();
                 const downloadId = data.download_id;
-
+                
                 progressDiv.style.display = 'block';
                 checkProgress(downloadId);
             } catch (error) {
                 console.error('Error:', error);
             }
         });
-
         
         function checkProgress(downloadId) {
             const interval = setInterval(async () => {
                 try {
                     const response = await fetch(`/progress/${downloadId}`);
                     const data = await response.json();
-
-                    progressBar.value = data.progress;
-                    progressText.textContent = `${data.status}: ${data.progress}%`;
-
+                    
+                    const progress = parseFloat(data.progress);
+                    if (!isNaN(progress)) {
+                        progressBar.value = progress;
+                        progressText.textContent = `${data.status}: ${progress.toFixed(2)}%`;
+                    } else {
+                        progressText.textContent = `${data.status}`;
+                    }
+                    
                     if (data.status === 'done') {
                         clearInterval(interval);
                         downloadLink.style.display = 'block';
