@@ -57,9 +57,7 @@ def get_video(download_id):
 
 def update_progress(download_id, d):
     if d['status'] == 'downloading':
-        progress = d.get('percentage', 0)
-        progress = float(progress) if progress is not None else 0
-        progress_data[download_id] = {'status': 'downloading', 'progress': progress}
+        progress_data[download_id] = {'status': 'downloading', 'progress': d.get('percentage', 0)}
     elif d['status'] == 'finished':
         progress_data[download_id] = {'status': 'done', 'progress': 100}
 
